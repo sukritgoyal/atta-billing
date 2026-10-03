@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Atta Billing Calculator</title>
+<style>
+  :root{
+    --bg:          #FFFFFF;
+    --surface:     #FFF3E8;
+    --surface-alt: #FFE6D2;
+    --ink:         #241B12;
+    --ink-soft:    #8A7863;
+    --orange:      #FF7A2E;
+    --orange-deep: #D65A0F;
+    --line:        #F0D9C2;
+    --error:       #B23A2B;
+    --error-bg:    #FBE7E3;
+    --radius:      10px;
+    font-size: 16px;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .figures{
+    font-variant-numeric: tabular-nums;
+  }
+
+  .app{
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 18px 16px 100px;
+    min-height: 100vh;
+  }
+
+  /* ---------- Header ---------- */
+  .hero{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .chakki{
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+  }
+
+  .hero h1{
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0 0 2px;
+    color: var(--ink);
+  }
+
+  .hero p{
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- Cards ---------- */
+  .card{
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+
+  .card-label{
+    display:block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--orange-deep);
+    margin-bottom: 8px;
+  }
+
+  .hint{
+    text-transform:none;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- Base price ---------- */
+  .base-price-card .input-wrap{
+    display:flex;
+    align-items:center;
+    background: var(--bg);
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+
+  .base-price-card .input-wrap:focus-within{
+    border-color: var(--orange);
+  }
+
+  .base-price-card .prefix{
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--orange-deep);
+    margin-right: 8px;
+  }
+
+  #basePrice{
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 1.5rem;
+    font-weight: 700;
+    width: 100%;
+    color: var(--ink);
+  }
+
+  .base-price-card.error .input-wrap{
+    border-color: var(--error);
+  }
+
+  .field-error{
+    display:none;
+    font-size: 0.78rem;
+    color: var(--error);
+    margin-top: 8px;
+  }
+
+  .base-price-card.error .field-error{ display:block; }
+
+  /* ---------- Product rows ---------- */
+  .products{ padding: 6px 16px 4px; }
+
+  .products-title{
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--orange-deep);
+    padding: 10px 0 4px;
+  }
+
+  .product-row{
+    padding: 16px 2px;
+    border-bottom: 1px dotted var(--line);
+  }
+
+  .product-row:last-child{ border-bottom: none; }
+
+  .product-row .pname{
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  .fields{
+    display:flex;
+    align-items:flex-end;
+    gap: 10px;
+  }
+
+  .field{
+    display:flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .field.qty-field{ flex: 0 0 108px; width: 108px; }
+  .field.packing-field{ flex: 1 1 0; }
+
+  .field label{
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--ink-soft);
+    margin-bottom: 5px;
+    white-space: nowrap;
+  }
+
+  .field-box{
+    display:flex;
+    align-items:center;
+    background: var(--bg);
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 10px;
+  }
+
+  .field-box:focus-within{ border-color: var(--orange); }
+
+  .field-box.readonly{
+    background: var(--surface-alt);
+    border-style: dashed;
+  }
+
+  .field-box input{
+    width: 100%;
+    border:none;
+    outline:none;
+    background: transparent;
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: right;
+    color: var(--ink);
+  }
+
+  input[type=number]::-webkit-inner-spin-button,
+  input[type=number]::-webkit-outer-spin-button{
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type=number]{ -moz-appearance: textfield; }
+
+  /* ---------- Quick packing-charge chips ---------- */
+  .chip-row{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 30px;
+    margin-top: 10px;
+    align-items:center;
+  }
+
+  .chip-btn{
+    background: var(--surface-alt);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 5px 11px;
+    border-radius: 999px;
+  }
+
+  .chip-btn.selected{
+    background: var(--orange);
+    border-color: var(--orange);
+    color: #fff;
+  }
+
+  /* ---------- Fixed bottom bar ---------- */
+  .fixed-bar{
+    position: fixed;
+    left: 16px; right: 16px; bottom: 16px;
+    max-width: 448px;
+    margin: 0 auto;
+    display:flex;
+    gap: 8px;
+    width: calc(100% - 32px);
+  }
+
+  .fixed-cta{
+    flex: 1 1 auto;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 15px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .btn-secondary{
+    flex: 1 1 auto;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 15px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  /* ---------- Review modal ---------- */
+  .modal-overlay{
+    position: fixed;
+    inset: 0;
+    background: rgba(20,14,8,0.45);
+    display:flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  .modal-overlay[hidden]{
+    display:none;
+  }
+
+  @media (min-width: 480px){
+    .modal-overlay{ align-items: center; }
+  }
+
+  .modal{
+    background: #fff;
+    width: 100%;
+    max-width: 460px;
+    max-height: 85vh;
+    overflow-y: auto;
+    border-radius: 16px 16px 0 0;
+    padding: 20px 18px 18px;
+    position: relative;
+  }
+
+  @media (min-width: 480px){
+    .modal{ border-radius: 16px; }
+  }
+
+  .modal-close{
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 32px; height: 32px;
+    border: none;
+    background: var(--surface-alt);
+    color: var(--ink);
+    border-radius: 50%;
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  .modal h2{
+    margin: 0 0 14px;
+    font-size: 1.05rem;
+    color: var(--ink);
+    padding-right: 34px;
+  }
+
+  .modal-baseprice{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+  }
+
+  .modal-baseprice .lbl{
+    color: var(--ink-soft);
+    font-size: 0.76rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+  }
+
+  .modal-baseprice .val{
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--orange-deep);
+  }
+
+  table.review-table{
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 4px;
+  }
+
+  table.review-table th{
+    text-align: left;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--ink-soft);
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  table.review-table th.num, table.review-table td.num{ text-align: right; }
+
+  table.review-table td{
+    font-size: 0.88rem;
+    padding: 8px 0;
+    border-bottom: 1px dotted var(--line);
+  }
+
+  table.review-table td.mname{ font-weight: 600; }
+
+  .modal-actions{
+    display:flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .modal-actions button{ flex: 1 1 0; padding: 14px; }
+
+  /* ---------- Print (57mm / 2" POS roll, RawBT) ---------- */
+  @page{
+    size: 57mm auto;
+    margin: 0;
+  }
+
+  @media print{
+    .hero, .base-price-card, .products, .fixed-bar, .modal-overlay{ display:none !important; }
+
+    html, body{
+      background: #fff;
+      color: #000;
+      width: 57mm;
+    }
+
+    .app{
+      max-width: 57mm;
+      width: 57mm;
+      margin: 0;
+      padding: 0;
+      min-height: 0;
+    }
+
+    .summary{
+      background: #fff;
+      border: none;
+      border-radius: 0;
+      padding: 2mm 2mm 6mm;
+      margin: 0;
+    }
+
+    .summary h2{
+      font-size: 13px;
+      text-align: center;
+      margin: 0 0 2px;
+    }
+
+    .summary .stamp{
+      text-align: center;
+      font-size: 9px;
+      color: #000;
+      margin-bottom: 6px;
+    }
+
+    table.bill{
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 4px;
+    }
+
+    table.bill th{
+      font-size: 8px;
+      color: #000;
+      padding: 3px 0 3px 2px;
+      border-bottom: 1px dashed #000;
+    }
+
+    table.bill td{
+      font-size: 10px;
+      color: #000;
+      padding: 3px 0 3px 2px;
+      border-bottom: 1px dashed #000;
+    }
+
+    table.bill th.num, table.bill td.num{
+      padding-left: 5px;
+    }
+
+    table.bill th:first-child, table.bill td:first-child{
+      padding-left: 0;
+    }
+
+    .totals{
+      border-top: 1px dashed #000;
+      padding-top: 3px;
+    }
+
+    .totals-row{
+      font-size: 10px;
+      padding: 2px 0;
+    }
+
+    .totals-row .lbl{ color: #000; }
+
+    .totals-row.grand{
+      background: #fff !important;
+      color: #000 !important;
+      margin: 3px 0 0;
+      padding: 4px 0;
+      border-top: 1px solid #000;
+      border-bottom: 1px solid #000;
+      border-radius: 0;
+      font-size: 12px;
+      font-weight: 700 !important;
+    }
+
+    .totals-row.grand .lbl{ color: #000 !important; font-weight: 700 !important; }
+
+    .empty-note{
+      color: #000;
+      background: #fff;
+      border: 1px dashed #000;
+    }
+  }
+
+  /* ---------- Summary ---------- */
+  .summary h2{
+    font-size: 1.1rem;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+
+  .summary .stamp{
+    font-size: 0.72rem;
+    color: var(--ink-soft);
+    margin-bottom: 14px;
+  }
+
+  table.bill{
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+  }
+
+  table.bill th{
+    text-align: left;
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--orange-deep);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  table.bill th.num, table.bill td.num{ text-align: right; }
+
+  table.bill td{
+    font-size: 0.84rem;
+    padding: 9px 0;
+    border-bottom: 1px dotted var(--line);
+    vertical-align: top;
+  }
+
+  table.bill td.pname{
+    font-weight: 600;
+    padding-right: 6px;
+  }
+
+  .totals{
+    border-top: 2px solid var(--ink);
+    padding-top: 10px;
+  }
+
+  .totals-row{
+    display:flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 5px 0;
+    font-size: 0.86rem;
+  }
+
+  .totals-row.grand{
+    background: var(--orange);
+    color: #fff;
+    margin: 8px -16px 4px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .totals-row .lbl{ color: var(--ink-soft); }
+  .totals-row.grand .lbl{ color: #fff; font-weight: 700; }
+
+  .empty-note{
+    font-size: 0.8rem;
+    color: var(--error);
+    background: var(--error-bg);
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="hero">
+    <svg class="chakki" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="29" fill="#FFE6D2" stroke="#D65A0F" stroke-width="2"/>
+      <circle cx="32" cy="32" r="10" fill="#D65A0F"/>
+    </svg>
+    <div>
+      <h1>Atta Billing</h1>
+      <p>Wheat flour rate &amp; bill calculator</p>
+    </div>
+  </div>
+
+  <section class="card base-price-card" id="baseCard">
+    <label class="card-label" for="basePrice">Base Price <span class="hint">— per 50kg bag</span></label>
+    <div class="input-wrap">
+      <span class="prefix">₹</span>
+      <input class="figures" type="number" id="basePrice" inputmode="numeric" placeholder="0" min="0">
+    </div>
+    <div class="field-error">Enter a valid base price to continue.</div>
+  </section>
+
+  <section class="card products">
+    <div class="products-title">Products</div>
+    <div id="productRows"></div>
+  </section>
+
+  <div class="fixed-bar">
+    <button class="btn-secondary" id="resetBtn">Reset</button>
+    <button class="fixed-cta" id="confirmBtn">Confirm</button>
+  </div>
+
+  <section class="card summary" id="summarySection" hidden></section>
+
+</div>
+
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal">
+    <button class="modal-close" id="modalCloseBtn">&times;</button>
+    <h2>Review Entry</h2>
+    <div id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="modalSummaryBtn">Summary</button>
+      <button class="fixed-cta" id="modalPrintBtn">Print</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  var PRODUCTS = [
+    { id: "loose",  name: "Loose",   unit: "Bags",     defaultCharge: 0,   hasPacking: false, chips: [] },
+    { id: "h10",    name: "10 H",    unit: "Bundles",  defaultCharge: 60,  hasPacking: true,  chips: [50,60,70,80] },
+    { id: "h5",     name: "5 H",     unit: "Bundles",  defaultCharge: 80,  hasPacking: true,  chips: [50,60,70,80] },
+    { id: "pp10",   name: "10 PP",   unit: "Bundles",  defaultCharge: 135, hasPacking: true,  chips: [135,155] },
+    { id: "pp5",    name: "5 PP",    unit: "Bundles",  defaultCharge: 155, hasPacking: true,  chips: [135,155] },
+    { id: "laalh",  name: "Laal H",  unit: "Bundles",  defaultCharge: 100, hasPacking: true,  chips: [] }
+  ];
+
+  var basePriceEl    = document.getElementById("basePrice");
+  var baseCardEl      = document.getElementById("baseCard");
+  var productRowsEl   = document.getElementById("productRows");
+  var summaryEl       = document.getElementById("summarySection");
+  var confirmBtn      = document.getElementById("confirmBtn");
+  var resetBtn        = document.getElementById("resetBtn");
+  var modalOverlayEl  = document.getElementById("modalOverlay");
+  var modalBodyEl     = document.getElementById("modalBody");
+  var modalCloseBtn   = document.getElementById("modalCloseBtn");
+  var modalSummaryBtn = document.getElementById("modalSummaryBtn");
+  var modalPrintBtn   = document.getElementById("modalPrintBtn");
+
+  function fmt(n){
+    return Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function fmtPlain(n){
+    return Number(n).toFixed(2);
+  }
+
+  // Round to nearest previous/next integer, or to .5, per house rule:
+  // decimal < 0.25  -> round down to whole number
+  // 0.25 <= decimal < 0.75 -> round to X.5
+  // decimal >= 0.75 -> round up to next whole number
+  function roundToHalfOrInt(n){
+    var num = Number(n);
+    var whole = Math.floor(num);
+    var decimal = num - whole;
+    if (decimal < 0.25){
+      return whole;
+    } else if (decimal < 0.75){
+      return whole + 0.5;
+    } else {
+      return whole + 1;
+    }
+  }
+
+  function fmtRounded(n){
+    var r = roundToHalfOrInt(n);
+    return (r % 1 === 0) ? String(r) : r.toFixed(1);
+  }
+
+  function clampDigits(el, maxDigits){
+    el.addEventListener("input", function(){
+      var v = el.value.replace(/[^0-9]/g, "");
+      if (v.length > maxDigits) v = v.slice(0, maxDigits);
+      el.value = v;
+    });
+  }
+
+  function getCharge(p){
+    if (!p.hasPacking) return 0;
+    var el = document.getElementById("charge-" + p.id);
+    return el.value === "" ? 0 : Number(el.value);
+  }
+
+  function markSelectedChip(id){
+    var val = document.getElementById("charge-" + id).value;
+    var chipEls = document.querySelectorAll('.chip-btn[data-id="' + id + '"]');
+    for (var i = 0; i < chipEls.length; i++){
+      chipEls[i].classList.toggle("selected", chipEls[i].getAttribute("data-val") === val);
+    }
+  }
+
+  // ---- Build product rows ----
+  PRODUCTS.forEach(function(p){
+    var row = document.createElement("div");
+    row.className = "product-row";
+
+    var packingFieldHtml = "";
+    if (p.hasPacking){
+      packingFieldHtml =
+        '<div class="field packing-field">' +
+          '<label>Packing +₹</label>' +
+          '<div class="field-box readonly">' +
+            '<input class="figures charge-input" type="number" min="0" id="charge-' + p.id + '" value="' + p.defaultCharge + '" readonly title="Double-tap to edit">' +
+          '</div>' +
+        '</div>';
+    }
+
+    var chipsHtml = p.chips.map(function(v){
+      return '<button type="button" class="chip-btn" data-id="' + p.id + '" data-val="' + v + '">₹' + v + '</button>';
+    }).join("");
+
+    row.innerHTML =
+      '<div class="pname">' + p.name + '</div>' +
+      '<div class="fields">' +
+        '<div class="field qty-field">' +
+          '<label>' + p.unit + '</label>' +
+          '<div class="field-box">' +
+            '<input class="figures qty-input" type="number" min="0" id="qty-' + p.id + '" placeholder="0">' +
+          '</div>' +
+        '</div>' +
+        packingFieldHtml +
+      '</div>' +
+      '<div class="chip-row">' + chipsHtml + '</div>';
+
+    productRowsEl.appendChild(row);
+
+    clampDigits(row.querySelector(".qty-input"), 3);
+
+    if (p.hasPacking){
+      var chargeInput = row.querySelector(".charge-input");
+      var chargeBox = chargeInput.parentElement;
+
+      chargeInput.addEventListener("dblclick", function(){
+        chargeBox.classList.remove("readonly");
+        chargeInput.readOnly = false;
+        chargeInput.focus();
+        chargeInput.select();
+      });
+
+      chargeInput.addEventListener("blur", function(){
+        if (chargeInput.value === ""){ chargeInput.value = p.defaultCharge; }
+        chargeInput.readOnly = true;
+        chargeBox.classList.add("readonly");
+        markSelectedChip(p.id);
+      });
+
+      chargeInput.addEventListener("input", function(){
+        var v = chargeInput.value.replace(/[^0-9]/g, "");
+        if (v.length > 3) v = v.slice(0, 3);
+        chargeInput.value = v;
+        markSelectedChip(p.id);
+      });
+
+      markSelectedChip(p.id);
+    }
+  });
+
+  // ---- Quick packing-charge chips ----
+  var chipButtons = document.querySelectorAll(".chip-btn");
+  for (var c = 0; c < chipButtons.length; c++){
+    chipButtons[c].addEventListener("click", function(){
+      var id = this.getAttribute("data-id");
+      var val = this.getAttribute("data-val");
+      document.getElementById("charge-" + id).value = val;
+      markSelectedChip(id);
+    });
+  }
+
+  // ---- Enter moves to next quantity field ----
+  var qtyInputs = Array.prototype.slice.call(document.querySelectorAll(".qty-input"));
+  qtyInputs.forEach(function(el, idx){
+    el.addEventListener("keydown", function(e){
+      if (e.key === "Enter"){
+        e.preventDefault();
+        if (idx < qtyInputs.length - 1){
+          qtyInputs[idx + 1].focus();
+        } else {
+          confirmBtn.focus();
+        }
+      }
+    });
+  });
+
+  basePriceEl.addEventListener("keydown", function(e){
+    if (e.key === "Enter"){
+      e.preventDefault();
+      if (qtyInputs[0]) qtyInputs[0].focus();
+    }
+  });
+
+  basePriceEl.addEventListener("input", function(){
+    var v = basePriceEl.value.replace(/[^0-9]/g, "");
+    if (v.length > 5) v = v.slice(0, 5);
+    basePriceEl.value = v;
+    baseCardEl.classList.remove("error");
+  });
+
+  // ---- Review modal ----
+  function openReviewModal(){
+    var base = basePriceEl.value === "" ? 0 : Number(basePriceEl.value);
+    if (!base || base <= 0){
+      baseCardEl.classList.add("error");
+      baseCardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    baseCardEl.classList.remove("error");
+
+    var items = [];
+    PRODUCTS.forEach(function(p){
+      var qtyEl = document.getElementById("qty-" + p.id);
+      var qty = qtyEl.value === "" ? 0 : Number(qtyEl.value);
+      if (qty > 0){
+        items.push({ name: p.name, qty: qty, hasPacking: p.hasPacking, charge: getCharge(p) });
+      }
+    });
+
+    var bodyHtml =
+      '<div class="modal-baseprice"><span class="lbl">Base Price</span><span class="val figures">₹' + base + '</span></div>';
+
+    if (items.length === 0){
+      bodyHtml += '<div class="empty-note">No items entered yet.</div>';
+    } else {
+      var rows = items.map(function(it){
+        return '<tr>' +
+          '<td class="mname">' + it.name + '</td>' +
+          '<td class="num figures">' + it.qty + '</td>' +
+          '<td class="num figures">' + (it.hasPacking ? "₹" + it.charge : "—") + '</td>' +
+        '</tr>';
+      }).join("");
+
+      bodyHtml +=
+        '<table class="review-table">' +
+          '<thead><tr><th>Item</th><th class="num">Qty</th><th class="num">Packing</th></tr></thead>' +
+          '<tbody>' + rows + '</tbody>' +
+        '</table>';
+    }
+
+    modalBodyEl.innerHTML = bodyHtml;
+    modalOverlayEl.hidden = false;
+  }
+
+  function closeModal(){
+    modalOverlayEl.hidden = true;
+  }
+
+  confirmBtn.addEventListener("click", openReviewModal);
+  modalCloseBtn.addEventListener("click", closeModal);
+  modalOverlayEl.addEventListener("click", function(e){
+    if (e.target === modalOverlayEl) closeModal();
+  });
+
+  // ---- Calculation (shared by Summary & Print) ----
+  function runCalculation(){
+    var base = basePriceEl.value === "" ? 0 : Number(basePriceEl.value);
+    if (!base || base <= 0){
+      baseCardEl.classList.add("error");
+      return false;
+    }
+    baseCardEl.classList.remove("error");
+
+    var lines = [];
+    var grandTotal = 0;
+    var totalUnits = 0;
+
+    PRODUCTS.forEach(function(p){
+      var qtyEl = document.getElementById("qty-" + p.id);
+      var qty = qtyEl.value === "" ? 0 : Number(qtyEl.value);
+      if (qty > 0){
+        var charge = getCharge(p);
+        var rate = base + charge;
+        var amount = qty * rate;
+        grandTotal += amount;
+        totalUnits += qty;
+        lines.push({ name: p.name, qty: qty, rate: rate, amount: amount });
+      }
+    });
+
+    if (lines.length === 0){
+      summaryEl.hidden = false;
+      summaryEl.innerHTML = '<div class="empty-note">Enter a quantity for at least one product to calculate the bill.</div>';
+      return false;
+    }
+
+    var avg = totalUnits > 0 ? grandTotal / totalUnits : 0;
+    var roundedAvg = roundToHalfOrInt(avg);
+    grandTotal = roundedAvg * totalUnits;
+
+    var now = new Date();
+    var stamp = now.toLocaleString("en-IN", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
+
+    var rowsHtml = lines.map(function(l){
+      return '<tr>' +
+        '<td class="pname">' + l.name + '</td>' +
+        '<td class="num figures">' + l.qty + '</td>' +
+        '<td class="num figures">' + fmtPlain(l.rate) + '</td>' +
+        '<td class="num figures">' + fmtPlain(l.amount) + '</td>' +
+      '</tr>';
+    }).join("");
+
+    summaryEl.hidden = false;
+    summaryEl.innerHTML =
+      '<h2>Bill Summary</h2>' +
+      '<div class="stamp">Calculated on ' + stamp + '</div>' +
+      '<table class="bill">' +
+        '<thead><tr>' +
+          '<th>Prod</th><th class="num">Qty</th><th class="num">Rate</th><th class="num">Amount</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rowsHtml + '</tbody>' +
+      '</table>' +
+      '<div class="totals">' +
+        '<div class="totals-row"><span class="lbl">Total Units</span><span class="figures">' + totalUnits + '</span></div>' +
+        '<div class="totals-row"><span class="lbl">Average Price / Unit</span><span class="figures">₹' + fmtRounded(roundedAvg) + '</span></div>' +
+        '<div class="totals-row grand"><span class="lbl">Grand Total</span><span class="figures">₹' + fmt(grandTotal) + '</span></div>' +
+      '</div>';
+
+    return true;
+  }
+
+  modalSummaryBtn.addEventListener("click", function(){
+    var ok = runCalculation();
+    closeModal();
+    summaryEl.scrollIntoView({ behavior: "smooth", block: ok ? "start" : "center" });
+  });
+
+  modalPrintBtn.addEventListener("click", function(){
+    var ok = runCalculation();
+    closeModal();
+    if (!ok){
+      summaryEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    window.print();
+  });
+
+  // ---- Reset ----
+  resetBtn.addEventListener("click", function(){
+    basePriceEl.value = "";
+    baseCardEl.classList.remove("error");
+    closeModal();
+
+    PRODUCTS.forEach(function(p){
+      var qtyInput = document.getElementById("qty-" + p.id);
+      qtyInput.value = "";
+      if (p.hasPacking){
+        var chargeInput = document.getElementById("charge-" + p.id);
+        chargeInput.value = p.defaultCharge;
+        chargeInput.readOnly = true;
+        chargeInput.parentElement.classList.add("readonly");
+        markSelectedChip(p.id);
+      }
+    });
+
+    summaryEl.hidden = true;
+    summaryEl.innerHTML = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+})();
+</script>
+
+</body>
+</html>
